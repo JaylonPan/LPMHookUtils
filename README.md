@@ -2,7 +2,8 @@
 Hook tools for Objective-C
 # 使用
 
-```- (void)viewDidLoad {
+```
+- (void)viewDidLoad {
     [super viewDidLoad];
     
     [LPMHookUtils addHookStartOfMethod:@selector(setIndex:test:) ofClass:[Test1ViewController class] withHookCallback:^(id receiver, NSArray *arguments) {
@@ -20,6 +21,7 @@ Hook tools for Objective-C
 ```
 # 关闭Log
 
-```[LPMHookUtils closeLog:YES];
+```
+[LPMHookUtils closeLog:YES];
 ```
 
