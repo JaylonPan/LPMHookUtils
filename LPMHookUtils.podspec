@@ -5,11 +5,11 @@ Pod::Spec.new do |s|
   s.version      = "0.0.1"
   s.summary      = "LPMHookUtils."
   s.description  = <<-DESC
-                    LPMHookUtils
+                    LPMHookUtils which is used to hook the objective-c method.
                    DESC
 
   s.homepage     = "https://github.com/JaylonPan/LPMHookUtils.git"
-  s.source       = {:git => "git@github.com:JaylonPan/LPMHookUtils.git", :tag => "#{s.version}"}
+  s.source       = {:git => "https://github.com/JaylonPan/LPMHookUtils.git", :tag => "#{s.version}"}
   s.license      = { :type => 'MIT', :text => <<-LICENSE
                       Copyright 2017
                       JaylonPan
