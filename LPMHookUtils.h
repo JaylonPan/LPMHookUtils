@@ -95,4 +95,13 @@ typedef void(^LPMHookCallbackBlock)(id receiver, NSArray *arguments);
  Remove all hooks which was using LPMHookUtils.
  */
 + (void)removeAllHooks;
+
+
+/**
+ Close the log from LPMHookUtils.
+
+ @param close If close is YES ,we will not print log any more. The default value is NO.
+ */
++ (void)closeLog:(BOOL)close;
+
 @end

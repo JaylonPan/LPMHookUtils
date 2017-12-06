@@ -2,7 +2,7 @@
 Pod::Spec.new do |s|
 
   s.name         = "LPMHookUtils"
-  s.version      = "0.0.1"
+  s.version      = "0.0.2"
   s.summary      = "LPMHookUtils."
   s.description  = <<-DESC
                     LPMHookUtils which is used to hook the objective-c method.

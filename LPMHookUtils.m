@@ -10,11 +10,7 @@
 #import <objc/message.h>
 
 #ifdef DEBUG
-#ifndef LPM_HOOK_LOG_CLOSE
-#define LPMLog(...) NSLog(__VA_ARGS__)
-#else
-#define LPMLog(...)
-#endif
+#define LPMLog(...) if(!g_closeLog) NSLog(__VA_ARGS__)
 #else
 #define LPMLog(...)
 #endif
@@ -24,7 +20,7 @@
 #define AfterInvocationKey @"afterInvocationKey"
 #define LPMError(errCode, desc) [NSError errorWithDomain:NSMachErrorDomain \
 code:errCode userInfo:@{NSLocalizedDescriptionKey: desc}]
-
+static BOOL g_closeLog;
 typedef NS_ENUM(NSUInteger, LPMHookOption) {
     LPMHookOptionBefore,
     LPMHookOptionReplace,
@@ -508,6 +504,9 @@ return @(val); } while (0)
     [self removeAllHooksOfClass:nil];
 }
 
++ (void)closeLog:(BOOL)close {
+    g_closeLog = close;
+}
 
 #pragma mark - C functions for the hook utils
 
@@ -900,7 +899,6 @@ static void swizzledTargetInvocation(NSObject *self, SEL selector, NSInvocation 
         }
     }
 }
-
 
 
 @end

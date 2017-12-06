@@ -7,6 +7,7 @@
 //
 
 #import "AppDelegate.h"
+#import "LPMHookUtils.h"
 @interface AppDelegate ()
 
 @end
@@ -15,7 +16,7 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    
+    [LPMHookUtils closeLog:YES];
     // Override point for customization after application launch.
     return YES;
 }
