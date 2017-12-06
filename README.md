@@ -19,5 +19,7 @@ Hook tools for Objective-C
 }
 ```
 # 关闭Log
-![](settingNoLog.jpeg)
+
+```[LPMHookUtils closeLog:YES];
+```
 
