@@ -20,6 +20,10 @@
 #define AfterInvocationKey @"afterInvocationKey"
 #define LPMError(errCode, desc) [NSError errorWithDomain:NSMachErrorDomain \
 code:errCode userInfo:@{NSLocalizedDescriptionKey: desc}]
+
+#define BlackList @[@"forwardInvocation:", @"__lpm_forwardInvocation:"]
+
+static NSString *const LPMForwardInvocationSelectorName = @"__lpm_forwardInvocation:";
 static BOOL g_closeLog;
 typedef NS_ENUM(NSUInteger, LPMHookOption) {
     LPMHookOptionBefore,
@@ -525,7 +529,12 @@ return @(val); } while (0)
 #pragma mark - C functions for the hook utils
 
 static NSString *addHook(Class clazz, SEL selector, id block, LPMHookOption option, BOOL useHookCallback,BOOL invokeOnce) {
-    
+    if ([BlackList indexOfObject:NSStringFromSelector(selector)] != NSNotFound) {
+        return nil;
+    }
+    if ([NSStringFromSelector(selector) hasPrefix:ReplaceHeaderName] ) {
+        return nil;
+    }
     NSInvocation *invocation = lpm_InvocationOfBlock(block);
     return addInvocation(clazz, selector, invocation,block, option, useHookCallback, invokeOnce);
 }
@@ -576,7 +585,7 @@ static void lpm_undoSwizzleClassInPlace(Class clazz) {
     });
 }
 
-static NSString *const LPMForwardInvocationSelectorName = @"__lpm_forwardInvocation:";
+
 static void lpm_swizzleForwardInvocation(Class clazz) {
     NSCParameterAssert(clazz);
     // If there is no method, replace will act like class_addMethod.
