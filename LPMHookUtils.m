@@ -119,6 +119,7 @@ typedef struct _LPMBlock {
 
 + (instancetype)operationWithSelector:(SEL)selector clazz:(Class)clazz;
 - (NSString *)addInvocation:(NSInvocation *)invocation
+                      block:(id)block
                      option:(LPMHookOption)option
           usingHookCallback:(BOOL)usingCallback
                  invokeOnce:(BOOL)invokeOnce;
@@ -131,6 +132,7 @@ typedef struct _LPMBlock {
 @property (nonatomic, strong) NSMutableDictionary<NSString * ,NSInvocation *> *replaceInvocationDict;
 @property (nonatomic, strong) NSMutableDictionary<NSString * ,NSInvocation *> *afterInvocationDict;
 @property (nonatomic, strong) NSMutableArray<NSString *> *needRemoveIDList;
+@property (nonatomic, strong) NSMutableDictionary *blockDict;
 @end
 
 @implementation LPMHookOperation
@@ -224,6 +226,7 @@ typedef struct _LPMBlock {
 }
 
 - (NSString *)addInvocation:(NSInvocation *)invocation
+                      block:(id)block
                      option:(LPMHookOption)option
           usingHookCallback:(BOOL)usingCallback
                  invokeOnce:(BOOL)invokeOnce {
@@ -241,11 +244,12 @@ typedef struct _LPMBlock {
         default:
             break;
     }
-    return [self addInvocation:invocation withKey:key usingHookCallback:usingCallback invokeOnce:invokeOnce];
+    return [self addInvocation:invocation withKey:key block:block usingHookCallback:usingCallback invokeOnce:invokeOnce];
 }
 
 - (NSString *)addInvocation:(NSInvocation *)invocation
                     withKey:(NSString *)key
+                      block:(id)block
           usingHookCallback:(BOOL)usingCallback
                  invokeOnce:(BOOL) invokeOnce {
     if (!invocation || !key) {
@@ -262,6 +266,7 @@ typedef struct _LPMBlock {
     NSInteger count = dic.count;
     NSString *identifier = [NSString stringWithFormat:@"%@^%@^%d^%d^%zd",self.baseIdentifier,key,usingCallback,invokeOnce,count];
     [dic setValue:invocation forKey:identifier];
+    [self.blockDict setValue:[block copy] forKey:identifier];
     return identifier;
 }
 
@@ -271,6 +276,7 @@ typedef struct _LPMBlock {
         [self.replaceInvocationDict removeAllObjects];
         [self.afterInvocationDict removeAllObjects];
         [self.needRemoveIDList removeAllObjects];
+        [self.blockDict removeAllObjects];
         return;
     }
     NSMutableDictionary *dic = nil;
@@ -282,6 +288,14 @@ typedef struct _LPMBlock {
         dic = self.afterInvocationDict;
     }
     [dic removeObjectForKey:identifier];
+    [self.blockDict removeObjectForKey:identifier];
+}
+
+- (NSMutableDictionary *)blockDict {
+    if (!_blockDict) {
+        _blockDict = [NSMutableDictionary dictionary];
+    }
+    return _blockDict;
 }
 
 - (NSMutableDictionary<NSString * ,NSInvocation *> *)beforeInvocationDict {
@@ -511,9 +525,9 @@ return @(val); } while (0)
 #pragma mark - C functions for the hook utils
 
 static NSString *addHook(Class clazz, SEL selector, id block, LPMHookOption option, BOOL useHookCallback,BOOL invokeOnce) {
-  
+    
     NSInvocation *invocation = lpm_InvocationOfBlock(block);
-   return addInvocation(clazz, selector, invocation, option, useHookCallback, invokeOnce);
+    return addInvocation(clazz, selector, invocation,block, option, useHookCallback, invokeOnce);
 }
 
 static void removeHook(Class clazz, SEL selector, NSString *identifier) {
@@ -604,7 +618,7 @@ static void lpm_replaceForwardIMP(Class clazz, SEL selector) {
 }
 
 static void lpm_undoReplaceForwardIMP(Class clazz, SEL selector) {
-  
+    
     // Check if the method is marked as forwarded and undo that.
     Method targetMethod = class_getInstanceMethod(clazz, selector);
     IMP targetMethodIMP = method_getImplementation(targetMethod);
@@ -619,7 +633,7 @@ static void lpm_undoReplaceForwardIMP(Class clazz, SEL selector) {
         class_replaceMethod(clazz, selector, originalIMP, typeEncoding);
         LPMLog(@"LPMHook: Removed hook for -[%@ %@].", clazz, NSStringFromSelector(selector));
     }
-
+    
 }
 
 static SEL lpm_replaceSelector(SEL selector) {
@@ -638,7 +652,7 @@ static BOOL lpm_isMsgForwardIMP(IMP impl) {
 static IMP lpm_getMsgForwardIMP(Class clazz, SEL selector) {
     IMP msgForwardIMP = _objc_msgForward;
 #if !defined(__arm64__)
-
+    
     Method method = class_getInstanceMethod(clazz, selector);
     const char *encoding = method_getTypeEncoding(method);
     BOOL methodReturnsStructValue = encoding[0] == _C_STRUCT_B;
@@ -674,7 +688,7 @@ static void getGlobalInvocationMap(void (^block)(NSMutableDictionary *globalInvo
     });
 }
 
-static NSString *addInvocation( Class clazz, SEL selector, NSInvocation *invocation,
+static NSString *addInvocation( Class clazz, SEL selector, NSInvocation *invocation,id block,
                                LPMHookOption option ,BOOL useCallback, BOOL invokeOnce) {
     NSString *key = NSStringFromClass(clazz);
     NSString *subKey = NSStringFromSelector(selector);
@@ -696,6 +710,7 @@ static NSString *addInvocation( Class clazz, SEL selector, NSInvocation *invocat
             [dic setValue:op forKey:subKey];
         }
         identifier = [op addInvocation:invocation
+                                 block:block
                                 option:option
                      usingHookCallback:useCallback
                             invokeOnce:invokeOnce];
@@ -725,7 +740,7 @@ static void removeInvocation( Class clazz,SEL selector, NSString *identifier) {
     }
     __block NSMutableDictionary *dic = nil;
     getGlobalInvocationMap(^(NSMutableDictionary *globalInvocationMap) {
-       dic = [globalInvocationMap valueForKey:key];
+        dic = [globalInvocationMap valueForKey:key];
     });
     
     if (!dic) {
@@ -832,7 +847,7 @@ static __unused BOOL lpm_isCompatibleBlockSignature(NSMethodSignature *blockSign
                 signaturesMatch = NO;
             }
         }
-
+        
         if (signaturesMatch) {
             for (NSUInteger idx = 2; idx < blockSignature.numberOfArguments; idx++) {
                 const char *methodType = [methodSignature getArgumentTypeAtIndex:idx];
